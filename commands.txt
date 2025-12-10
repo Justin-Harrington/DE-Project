@@ -1,0 +1,17 @@
+Start docker:
+docker compose up -d
+
+Stop docker:
+docker compose down
+
+Enter postgres:
+docker exec -it postgres_dev psql -U myuser -d mydatabase
+
+exit postgres:
+\q
+
+see docker containers:
+docker ps
+
+
+TEST
