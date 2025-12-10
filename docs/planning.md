@@ -6,8 +6,8 @@
 
 ## Skills to dev
 
-- [ ] Docker -> compose file
-- [ ] Postgres <- orchestrated via compose
+- [X] Docker -> compose file
+- [X] Postgres <- orchestrated via compose
 
 - [ ] ?Cloud?
 - [ ] Data Quality
