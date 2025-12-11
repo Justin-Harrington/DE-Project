@@ -7,8 +7,9 @@ def main():
     headers = {"User-Agent": "Mozilla/5.0"}
 
     response = requests.get(url, headers=headers)
-    print(response.status_code)
-    print(response.headers["Content-Type"])
+    print(response)
+    #print(response.status_code)
+    #print(response.headers["Content-Type"])
 
 
 if __name__ == "__main__":
