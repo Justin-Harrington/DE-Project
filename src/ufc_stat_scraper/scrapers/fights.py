@@ -36,22 +36,22 @@ def fights_scraper():
         header_tags[0]
         .get_text(strip=True)
         .replace("Date:","")
-        .strip()
         ) 
     event_location = ( #grabs and cleans up event location
         header_tags[1]
         .get_text(strip=True)
         .replace("Location:", "")
-        .strip()
     ) 
 
     event_info = { #dictionary to hold event info
     "event_name": event_name,
-    "event_date_raw": event_date,
+    "event_date_parsed": event_date,
     "location_raw": event_location,
     } 
 
-    print(event_location)
+    print(event_info) #prints event info for testing
+
+
     return
 
 
