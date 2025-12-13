@@ -22,17 +22,17 @@ def events_scraper():
     "Upgrade-Insecure-Requests": "1",
     } #default headers for web scraping requests
 
-    session = requests.Session() #start a session 
-    session.headers.update(HEADERS) #update session with headers
+    with requests.Session() as session: #start a session 
+        session.headers.update(HEADERS) #update session with headers
 
-    response = session.get(url, timeout=10) #get request to url
-    response.raise_for_status() #checks for good connection and stops if not
-    html = response.text #assign response text to variable
+        response = session.get(url, timeout=10) #get request to url
+        response.raise_for_status() #checks for good connection and stops if not
+        html = response.text #assign response text to variable
 
-    event_soup = BeautifulSoup(html, "html.parser") #parse html with BS4 - turning it into a soup object which can be searched
+        event_soup = BeautifulSoup(html, "html.parser") #parse html with BS4 - turning it into a soup object which can be searched
 
-    event_list = event_soup.find_all("a", class_=["b-link", "b-link_style_white"], href=True) #creates a list of all a tags with a link to a specific event page
-    hrefs = [a["href"] for a in event_list] #rips out just the hrefs from the a tags and puts them in a list
+        event_list = event_soup.find_all("a", class_=["b-link", "b-link_style_white"], href=True) #creates a list of all a tags with a link to a specific event page
+        hrefs = [a["href"] for a in event_list] #rips out just the hrefs from the a tags and puts them in a list
 
     return 
 
