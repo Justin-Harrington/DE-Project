@@ -1,9 +1,12 @@
+from time import time
 import requests
 from bs4 import BeautifulSoup
+from helper_functions import generate_fight_schema, parse_int, parse_of, parse_pct, parse_time
 
 def fights_scraper():
-    #url = "http://ufcstats.com/fight-details/a5a81a39ccf9b680" #url to royval vs kape fight page for testing
-    url = "http://ufcstats.com/fight-details/b3d2ac2244e4f791" #url to terrance mckinney vs chris duncan fight page for testing
+
+    #url = "http://ufcstats.com/fight-details/b2218930b982d9b6" #url to belal bs ian cuck garry fight page for testing
+    url = "http://ufcstats.com/fight-details/4a0db214d9721d6e" #url to merab vs yan - 5 0f 5 rnds 
     HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -26,7 +29,7 @@ def fights_scraper():
     response = session.get(url, timeout=10) #get request to url
     response.raise_for_status() #checks for good connection and stops if not
     html = response.text #assign response text to variable
-   
+    
     fight_soup = BeautifulSoup(html, "html.parser") #parse html with BS4 - turning it into a soup object which can be searched
     
     nickname = fight_soup.find_all("p", class_=["b-fight-details__person-title"]) #finds nicknames of fighters and stores them in dictionary
@@ -41,23 +44,171 @@ def fights_scraper():
     weightclass = weightclass.join(weightclass.split()[:-1])
     data["weightclass"] = weightclass
 
-    method = fight_soup.find("i", class_=["b-fight-details__text-item_first"]).get_text(strip=False) #finds type of victory and stores it in dictionary
-    method = method.join(method.split()[1:]).strip()
-    data["method"] = method
+    method = fight_soup.find("i", class_=["b-fight-details__text-item_first"]).get_text(strip=True) #finds type of victory and stores it in dictionary
+    data["method"] = method[7:]
 
     fight_time = fight_soup.find_all("i", class_=["b-fight-details__text-item"]) #finds fight time details, referee name and stores them in dictionary
-    data["total_rounds"] = fight_time[0].get_text(strip=True)[-1]
+    data["total_rounds"] = int(fight_time[0].get_text(strip=True)[-1])
     data["total_fight_time"] = fight_time[1].get_text(strip=True)[5:]
     data['total_rounds'] = fight_time[2].get_text(strip=True)[12]
     data["referee"] = fight_time[3].get_text(strip=True)[8:]
     
     method_details = fight_soup.find_all("p", class_=["b-fight-details__text"]) #finds method of victory and stores it in dictionary         
     data["method_details"] = method_details[1].get_text(strip=True)[8:]
-    #print(data) #prints event info for testing
 
+    schema = generate_fight_schema() # generate schema for fight data 
+    data.update(schema) # adds the schema to the data dictionary
 
+    stats_table = fight_soup.find_all("p", class_=["b-fight-details__table-text"]) #finds number of knockdowns for each fighter and stores them in dictionary
+
+    ROUND_STRUCTURE_PART_1 = [
+    {
+        "parser": "int",
+        "fields": ["knockdowns"],
+    },
+    {
+        "parser": "of",
+        "fields": ["sig_strikes_landed", "sig_strikes_attempted"],
+    },
+    {
+        "parser": "pct",
+        "fields": ["sig_strike_pct"],
+    },
+        {
+        "parser": "of",
+        "fields": ["strikes_landed", "strikes_attempted"],
+    },
+    {
+        "parser": "of",
+        "fields": ["takedowns_landed", "takedowns_attempted"],
+    },
+    {
+        "parser": "pct",
+        "fields": ["takedowns_pct"],
+    },
+    {
+        "parser": "int",
+        "fields": ["sub_attempted"],
+    },
+    {
+        "parser": "int",
+        "fields": ["reversals"],
+    },
+    {
+        "parser": "time",
+        "fields": ["control_time"],
+    }
+    ]
+
+    ROUND_STRUCTURE_PART_2 = [
+        {
+        "parser": "of",
+        "fields": ["sig_strikes_head_landed", "sig_strikes_head_attempted"],
+    },
+        {
+        "parser": "of",
+        "fields": ["sig_strikes_body_landed", "sig_strikes_body_attempted"],
+    },
+        {
+        "parser": "of",
+        "fields": ["sig_strikes_leg_landed", "sig_strikes_leg_attempted"],
+    },
+        {
+        "parser": "of",
+        "fields": ["sig_strikes_distance_landed", "sig_strikes_distance_attempted"],
+    },
+        {
+        "parser": "of",
+        "fields": ["sig_strikes_clinch_landed", "sig_strikes_clinch_attempted"],
+    },
+        {
+        "parser": "of",
+        "fields": ["sig_strikes_ground_landed", "sig_strikes_ground_attempted"],
+    }
+    ]
+
+    round_order = ["total"] + [str(i) for i in range(1, int(data["total_rounds"]) + 1)]
+    index = 2
+    sides=["red", "blue"]
+    #print(stats_table[19].get_text(strip=True))
+    for round in round_order:
+        for x in ROUND_STRUCTURE_PART_1:
+                for side in sides:
+                    if len(x["fields"]) == 1:
+                        if x["parser"] == "int":
+                            for y in x['fields']:
+                                #print(stats_table[index].get_text(strip=True))
+                                data[f"{side}_{y}_{round}"] = parse_int((stats_table[index].get_text(strip=True)))
+                                #print([f"{side}_{y}_{round}",data[f"{side}_{y}_{round}"], f"{index}", 'int'])
+                                index += 1 
+                        elif x["parser"] == "pct":
+                            for y in x['fields']:
+                                data[f"{side}_{y}_{round}"] = parse_pct(stats_table[index].get_text(strip=True))
+                                #print([f"{side}_{y}_{round}", data[f"{side}_{y}_{round}"], f"{index}", 'pct'])
+                                index += 1
+                        elif x["parser"] == "time":
+                            #print('in time parser')
+                            for y in x['fields']:
+                                data[f"{side}_{y}_{round}"] = parse_time(stats_table[index].get_text(strip=True))
+                                #print([f"{side}_{y}_{round}", data[f"{side}_{y}_{round}"], f"{index}", 'time'])
+                                index += 1
+
+                    elif len(x["fields"]) == 2:
+                        #print([stats_table[index].get_text(strip=True), f"{index}", 'before_split'])
+                        holder = parse_of(stats_table[index].get_text(strip=True))
+                        landed = holder[0]
+                        attempted = holder[1]
+                        data[f"{side}_{x['fields'][0]}_{round}"] = landed
+                        data[f"{side}_{x['fields'][1]}_{round}"] = attempted
+                        #print([f"{side}_{x['fields'][0]}_{round}", data[f"{side}_{x['fields'][0]}_{round}"],f"{index}", 'of'])
+                        #print([f"{side}_{x['fields'][1]}_{round}", data[f"{side}_{x['fields'][1]}_{round}"],f"{index}", 'of'])
+                        index += 1
+        index += 2
     
-    return 
+    index += 4
 
+    for round in round_order: #second pass part for significant strikes stats
+        for x in ROUND_STRUCTURE_PART_2:
+                for side in sides:
+                    if len(x["fields"]) == 1:
+                        if x["parser"] == "int":
+                            for y in x['fields']:
+                                #print(stats_table[index].get_text(strip=True))
+                                data[f"{side}_{y}_{round}"] = parse_int((stats_table[index].get_text(strip=True)))
+                                #print([f"{side}_{y}_{round}",data[f"{side}_{y}_{round}"], f"{index}", 'int'])
+                                index += 1 
+                        elif x["parser"] == "pct":
+                            for y in x['fields']:
+                                data[f"{side}_{y}_{round}"] = parse_pct(stats_table[index].get_text(strip=True))
+                                #print([f"{side}_{y}_{round}", data[f"{side}_{y}_{round}"], f"{index}", 'pct'])
+                                index += 1
+                        elif x["parser"] == "time":
+                            #print('in time parser')
+                            for y in x['fields']:
+                                data[f"{side}_{y}_{round}"] = parse_time(stats_table[index].get_text(strip=True))
+                                #print([f"{side}_{y}_{round}", data[f"{side}_{y}_{round}"], f"{index}", 'time'])
+                                index += 1
+
+                    elif len(x["fields"]) == 2:
+                        #print([stats_table[index].get_text(strip=True), f"{index}", 'before_split'])
+                        holder = parse_of(stats_table[index].get_text(strip=True))
+                        landed = holder[0]
+                        attempted = holder[1]
+                        data[f"{side}_{x['fields'][0]}_{round}"] = landed
+                        data[f"{side}_{x['fields'][1]}_{round}"] = attempted
+                        #print([f"{side}_{x['fields'][0]}_{round}", data[f"{side}_{x['fields'][0]}_{round}"],f"{index}", 'of'])
+                        #print([f"{side}_{x['fields'][1]}_{round}", data[f"{side}_{x['fields'][1]}_{round}"],f"{index}", 'of'])
+                        index += 1
+        index += 6
+
+
+    for key, value in data.items():
+        if value is not None:
+            print(f"{key}: {value}")
+    #print(ROUND_STRUCTURE_PART_1[1]['fields'][0])
+    
+    #print(stats_table[22].get_text(strip=True))
+    #print(stats_table[39].get_text(strip=True))
+    return
 
 fights_scraper()
