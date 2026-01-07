@@ -1,6 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
-
+from fights import fights_scraper
+from helper_functions import get_page, polite_sleep, is_today_after
+import json
 def events_scraper():
 
     url = "http://ufcstats.com/statistics/events/completed?page=all" #url to all events page of ufcstats.com
@@ -30,11 +32,28 @@ def events_scraper():
         html = response.text #assign response text to variable
 
         event_soup = BeautifulSoup(html, "html.parser") #parse html with BS4 - turning it into a soup object which can be searched
-
+        
         event_list = event_soup.find_all("a", class_=["b-link", "b-link_style_white"], href=True) #creates a list of all a tags with a link to a specific event page
         hrefs = [a["href"] for a in event_list] #rips out just the hrefs from the a tags and puts them in a list
-
+        test = event_soup.find("span", class_="b-statistics__date").get_text(strip=True)
+        if is_today_after(test) == False:
+            hrefs = hrefs[1:]
+        hrefs = hrefs[:-30] #removes last 30 hrefs which are not under the unified MMA ruleset
+        print("step 1")
+        
+        #print(hrefs)
+        with open("data.jsonl", "a", encoding="utf-8") as f:
+            print("opened file")
+            for href in hrefs:
+                html = get_page(session, href)
+                if html is None:
+                    continue
+                print("step 2")
+                fights_scraper(session, href, f) #calls fights_scraper function for each event link found
+                polite_sleep() #polite sleep between requests
+       
     return 
+
 
 if __name__ == "__main__":
     events_scraper()

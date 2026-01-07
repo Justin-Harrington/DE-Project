@@ -1,3 +1,61 @@
+from __future__ import annotations
+import time
+import random
+import requests
+import logging
+from datetime import date, datetime
+from typing import Union
+
+
+def is_today_after(date_str: str, fmt: str = "%B %d, %Y") -> bool: 
+    """
+    Return True if today's date is strictly AFTER the given date string.
+
+    Example input: "December 13, 2025"
+    Default format: "%B %d, %Y"
+    """
+    target = datetime.strptime(date_str.strip(), fmt).date()
+    return date.today() > target
+
+
+def polite_sleep(): # will sleep between requests to avoid overloading server
+    wait = random.uniform(1.5, 3.5)
+    time.sleep(wait)
+
+def get_page(session, url, max_retries=3): #robust page retrieval with retries and error handling
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = session.get(url, timeout=15)
+
+            if response.status_code == 200:
+                logging.info(f"200 OK | {url}")
+                return response.text
+
+            elif response.status_code in (429, 503):
+                wait = random.uniform(10, 30)
+                logging.warning(
+                    f"{response.status_code} rate-limited | {url} | sleeping {wait:.1f}s"
+                )
+                time.sleep(wait)
+
+            elif response.status_code == 403:
+                logging.error(f"403 FORBIDDEN | {url} | stopping scrape")
+                raise RuntimeError("Blocked by server")
+
+            else:
+                logging.warning(
+                    f"{response.status_code} unexpected status | {url}"
+                )
+
+        except requests.RequestException as e:
+            wait = random.uniform(5, 15)
+            logging.error(
+                f"Request error | {url} | {e} | retry {attempt}/{max_retries} | sleeping {wait:.1f}s"
+            )
+            time.sleep(wait)
+
+    logging.error(f"FAILED after {max_retries} retries | {url}")
+    return None
 
 def generate_fight_schema(
     sides=("red", "blue"),
@@ -39,7 +97,19 @@ def generate_fight_schema(
 
     schema = {}
     rounds = int(rounds)
+    schema["event_name"] = None
+    schema["event_date_parsed"] = None
+    schema["location_raw"] = None
+    schema["weightclass"] = None
+    schema["method"] = None
+    schema["ending_round"] = None
+    schema["total_fight_time"] = None
+    schema["total_rounds"] = None
+    schema["referee"] = None
+    schema["method_details"] = None
     for side in sides:
+        schema[f"{side}_nickname"] = None
+        schema[f"{side}_outcome"] = None
         for metric in base_metrics:
             for r in range(1, rounds + 1):
                 schema[f"{side}_{metric}_round_{r}"] = None
@@ -145,10 +215,31 @@ def parse_pct(value):
         return None
 
 def parse_time(value):
+    """
+    Parse a time string in 'm:ss' format and return total seconds as int.
+    Returns None if value is None or empty.
+    Raises ValueError for invalid formats.
+    """
     if value is None:
         return None
-    else:
-        return value.strip()
+
+    value = value.strip()
+    if not value:
+        return None
+
+    try:
+        minutes_str, seconds_str = value.split(":")
+        minutes = int(minutes_str)
+        seconds = int(seconds_str)
+
+        if seconds < 0 or seconds >= 60:
+            raise ValueError("Seconds must be between 0 and 59")
+
+        return minutes * 60 + seconds
+
+    except Exception as e:
+        raise ValueError(f"Invalid time format '{value}', expected m:ss") from e
+
 
 
 
