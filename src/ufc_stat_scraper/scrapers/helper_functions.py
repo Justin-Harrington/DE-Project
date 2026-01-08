@@ -122,6 +122,10 @@ def generate_fight_schema(
 
     schema = {}
     rounds = int(rounds)
+    schema["validation_status"] = None
+    schema["validation_errors"] = None
+    schema["parser_version"] = None
+    schema["scraped_at_utc"] = None
     schema["url"] = None
     schema["event_name"] = None
     schema["event_date_parsed"] = None
