@@ -6,6 +6,31 @@ import logging
 from datetime import date, datetime
 from typing import Union
 
+# def extract_judges_scores(text: str) -> list[str]:
+
+
+def trim_words(text: str, remove_start: int, remove_end: int) -> str:
+    """
+    Removes `remove_start` words from the beginning and
+    `remove_end` words from the end of a string.
+
+    Words are defined as whitespace-separated tokens.
+
+    Returns an empty string if nothing remains.
+    """
+    if not text:
+        return ""
+
+    if remove_start < 0 or remove_end < 0:
+        raise ValueError("remove_start and remove_end must be >= 0")
+
+    words = text.split()
+
+    if remove_start + remove_end >= len(words):
+        return ""
+
+    return " ".join(words[remove_start:len(words) - remove_end])
+
 
 def is_today_after(date_str: str, fmt: str = "%B %d, %Y") -> bool: 
     """
@@ -97,6 +122,7 @@ def generate_fight_schema(
 
     schema = {}
     rounds = int(rounds)
+    schema["url"] = None
     schema["event_name"] = None
     schema["event_date_parsed"] = None
     schema["location_raw"] = None
@@ -107,6 +133,17 @@ def generate_fight_schema(
     schema["total_rounds"] = None
     schema["referee"] = None
     schema["method_details"] = None
+    schema["title_fight"] = None
+    schema["sex"] = None
+    schema["judge_1"] = None
+    schema["judge_2"] = None
+    schema["judge_3"] = None
+    schema["judge_1_score_red"] = None
+    schema["judge_1_score_blue"] = None
+    schema["judge_2_score_red"] = None
+    schema["judge_2_score_blue"] = None
+    schema["judge_3_score_red"] = None
+    schema["judge_3_score_blue"] = None
     for side in sides:
         schema[f"{side}_nickname"] = None
         schema[f"{side}_outcome"] = None
