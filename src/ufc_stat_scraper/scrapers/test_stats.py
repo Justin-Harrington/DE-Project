@@ -239,7 +239,7 @@ def scraper():
                             #print([f"{side}_{x['fields'][1]}_{round}", data[f"{side}_{x['fields'][1]}_{round}"],f"{index}", 'of'])
                             index += 1
             index += 6
-        
+        print(len(data))
     
 
         # for key, value in data.items():
