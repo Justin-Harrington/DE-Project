@@ -7,11 +7,18 @@ docker compose down
 Enter postgres:
 docker exec -it postgres_dev psql -U myuser -d mydatabase
 
-exit postgres:
-\q
+exit postgres: \q
+
+list dbs: \l
+
+connect to db: \c mydatabase
+
+list tables: \d table_name
+
+RUN PYTHON SCRIPT VIA uv: uv run python myscript.py
 
 see docker containers:
 docker ps
 
 
-TEST part 2
+
